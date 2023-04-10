@@ -1,5 +1,5 @@
 test/%.s: test/%.snek src/main.rs
-	cargo run -- $< test/$*.s
+	cargo run --release -- $< test/$*.s
 
 test/%.run: test/%.s runtime/start.rs
 	nasm -f elf64 test/$*.s -o runtime/our_code.o

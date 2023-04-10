@@ -22,6 +22,7 @@ fn parse_expr(s: &Sexp) -> Expr {
                 "negate" => Expr::Negate(Box::new(parse_expr(e))),
                 _ => panic!("Unknown op"),
             },
+            [e] => parse_expr(e),
             _ => panic!("Parse error"),
         },
         _ => panic!("Parse error"),
