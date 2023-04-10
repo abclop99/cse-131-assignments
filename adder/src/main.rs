@@ -9,6 +9,7 @@ enum Expr {
     Num(i32),
     Add1(Box<Expr>),
     Sub1(Box<Expr>),
+    Negate(Box<Expr>),
 }
 
 fn parse_expr(s: &Sexp) -> Expr {
@@ -18,6 +19,7 @@ fn parse_expr(s: &Sexp) -> Expr {
             [Sexp::Atom(S(op)), e] => match op.as_str() {
                 "add1" => Expr::Add1(Box::new(parse_expr(e))),
                 "sub1" => Expr::Sub1(Box::new(parse_expr(e))),
+                "negate" => Expr::Negate(Box::new(parse_expr(e))),
                 _ => panic!("Unknown op"),
             },
             _ => panic!("Parse error"),
@@ -32,6 +34,7 @@ fn compile_expr(expr: &Expr) -> String {
         Expr::Num(n) => format!("mov rax, {}", n),
         Expr::Add1(subexpr) => compile_expr(subexpr) + "\nadd rax, 1",
         Expr::Sub1(subexpr) => compile_expr(subexpr) + "\nsub rax, 1",
+        Expr::Negate(subexpr) => compile_expr(subexpr) + "\nneg rax",
     }
 }
 
