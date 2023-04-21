@@ -1,3 +1,6 @@
 [submodule "boa-abclop99"]
 	path = boa-abclop99
 	url = git@github.com:ucsd-compilers-s23/boa-abclop99.git
+[submodule "cobra-abclop99"]
+	path = cobra-abclop99
+	url = git@github.com:ucsd-compilers-s23/cobra-abclop99.git
