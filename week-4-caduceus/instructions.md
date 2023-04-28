@@ -1,0 +1,43 @@
+Instructions:
+
+Assigned compilers: 62, 36
+
+- For each compiler
+        - Tracing the compiler
+                - Choose 2 programs that run successfully
+                        - The programs should use
+                                - Loop that runs several times and terminates
+                                - At least 2 different binary operators
+                                - `input`
+                        - For each program
+                                - Show 3 relevant code snippets from the compiler that are critical to its compilation
+                                        - Ex: data structures used in the type checker, etc.
+                                        - Different snippets unless interestingly different behavior
+        - Bugs, Missing features, and Design Decisions
+                - Choose a program that has a different behavior than it should (works wrong)
+                        - If key feature unimplemented
+                                - Describe how you would add it
+                                - TODO
+                        - If implemented, but error
+                                - Describe how to fix
+                                - TODO
+                        - If implemented, but wrong
+                                - Decide if it is a reasonable design decision
+                                        - If makes design easier/simpler, identify how
+                                        - If bug, how to fix
+                                        - If better design than chosen for Cobra
+                - if perfectly implemented
+                        - Explain what tested
+                        - Why confident that it's correct
+        - Lessons and Advice
+                - Answer
+                        - Identify decision made in compiler that's different from yours
+                                - Describe one way it's better
+                        - Identify decision made in compiler that's different from yours
+                                - Describe one way it's worse
+                        - One improvement to make in mine after seeing it
+                        - One improvement recommended to author of compiler
+- Hand-in
+        - PDF
+        - Pages for 1st compiler, followed by pages for 2nd compiler
+                - Start review of 2nd compiler on a new page
