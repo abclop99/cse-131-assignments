@@ -5,6 +5,83 @@
 
 	\subsection{Program 1}
 
+	\begin{lstlisting}[title=Factorial Program, language=Lisp]
+		(let
+			((i 1) (acc 1))
+			(loop
+				(if (> i input)
+					(break acc)
+					(block
+						(set! acc (* acc i))
+						(set! i (+ i 1))
+					)
+				)
+			)
+		)
+	\end{lstlisting}
+
+	\subsubsection{Relevant snippets}
+
+	\begin{enumerate}
+		\item This is the code for compiling a loop.
+			\begin{lstlisting}
+				Expr::Loop(e1) => {
+				    let labelstart = gen_label(ls);
+				    let labelbreak = gen_label(ls);
+				    instrs.push(Instr::ILabel(labelstart));
+				    h_compile_with(e1, instrs, si, env, ls, Some(labelbreak));
+				    instrs.push(Instr::IJmp(labelstart));
+				    instrs.push(Instr::ILabel(labelbreak));
+				},
+			\end{lstlisting}
+
+			\begin{itemize}
+				\item Labels don't have useful names, which makes the generated Assembly code a hard to follow.
+			\end{itemize}
+		\item The code for compiling \verb|Expr| into an string of Assembly instructions.
+			\begin{lstlisting}
+				fn compile(e: &Expr) -> String {
+				    let mut instrs = Vec::new();
+				    let mut ls = 0;
+				    h_compile_with(e, &mut instrs, 2, &HashMap::new(), &mut ls, None);
+				    instrs.iter().map(|&i| format!("  {}\n", &instr_to_str(i))).fold(String::new(), |acc, s| acc + &s)
+				}
+			\end{lstlisting}
+			\begin{itemize}
+				\item Mutably borrowing a vector of instructions and adding to it is an interesting decision.
+				\item Using explicitly called functions to convert Assembly components to strings is a little clumsy when the \verb|Display| exists.
+				\item Every line of Assembly is indented by two spaces, including labels. This makes the generated Assembly code a little difficult to read.
+				\item What does \verb|h_compile_with| stand for?
+			\end{itemize}
+
+		\item A snippet of the part of \verb|parse_expr| that handles parsing to \verb|BinOp|.
+			\begin{lstlisting}
+				[Sexp::Atom(S(op)), e1, e2] if op == "+" =>
+				    Expr::BinOp(Op2::Plus, Box::new(parse_expr(e1)), Box::new(parse_expr(e2))),
+				[Sexp::Atom(S(op)), e1, e2] if op == "-" =>
+				    Expr::BinOp(Op2::Minus, Box::new(parse_expr(e1)), Box::new(parse_expr(e2))),
+				[Sexp::Atom(S(op)), e1, e2] if op == "*" =>
+				    Expr::BinOp(Op2::Times, Box::new(parse_expr(e1)), Box::new(parse_expr(e2))),
+				. . . (other operators)
+			\end{lstlisting}
+			\begin{itemize}
+				\item A lot of repetition in the code. You can match on the pattern \verb|[Sexp::Atom(S(op)), e1, e2]| once and then match on the operator. Just make sure you match any other expressions that could have the same format first:
+
+					\begin{lstlisting}
+						[Sexp::Atom(S(op)), e1, e2] => {
+						    let op = match op.as_str() {
+						        "+" => Op2::Plus,
+						        "-" => Op2::Minus,
+						        "*" => Op2::Times,
+							. . .
+						        _ => panic!("Invalid operator"),
+						    };
+						    Expr::BinOp(op, Box::new(parse_expr(e1)), Box::new(parse_expr(e2)))
+						}
+					\end{lstlisting}
+			\end{itemize}
+	\end{enumerate}
+
 	\subsection{Program 2}
 
 	\section{Bugs, Missing Features, and Design Decisions}
@@ -12,12 +89,24 @@
 	\section{Lessons and Advice}
 
 	\begin{enumerate}
-		\item 
-		\item
-		\item
-		\item Run \verb|cargo clippy --all| and fix the problems
+		\item Defining common snippets of Assembly as vectors and adding them to the vector of instructions is a good idea.
+		\item the function \verb|h_compile_with| takes a \verb|&mut Vec<Instr>|.
 
-			Run \verb|cargo fmt| to format the code.
+			Labels don't have useful names
+
+			%Why is \verb|gen_label| a closure?
+		\item
+		\item 
+			\begin{itemize}
+				\item Run \verb|cargo clippy --all| and fix the problems
+				\item Run \verb|cargo fmt| to format the code.
+				\item Implement \verb|Display| for \verb|Instr|, \verb|Val|, etc. to get the \verb|ToString| trait so you can do
+					\begin{lstlisting}[language=Rust, numbers=none, frame=none]
+        					Instr::IMov(dst, src) => format!("mov {}, {}", dst, src),
+					\end{lstlisting}
+					to get the string representation of something.
+			\end{itemize}
+
 	\end{enumerate}
 
 	\chapter*{Compiler 36}
