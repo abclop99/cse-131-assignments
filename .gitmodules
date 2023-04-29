@@ -4,3 +4,6 @@
 [submodule "cobra-abclop99"]
 	path = cobra-abclop99
 	url = git@github.com:ucsd-compilers-s23/cobra-abclop99.git
+[submodule "week-4-caduceus/listings-rust"]
+	path = week-4-caduceus/listings-rust
+	url = git@github.com:denki/listings-rust.git
