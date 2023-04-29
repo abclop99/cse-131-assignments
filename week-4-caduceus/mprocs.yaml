@@ -1,0 +1,5 @@
+procs:
+  nextonic watch:
+    cmd: ["tectonic", "-X", "watch"]
+    autostart: true
+
