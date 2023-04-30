@@ -3,14 +3,22 @@
 \usepackage{geometry}
 \usepackage{listings, lstautogobble, listings-rust}
 
+\definecolor{darkgreen}{rgb}{0,0.6,0}
+\definecolor{lightgray}{rgb}{0.90,0.90,0.90}
+\definecolor{darkgray}{rgb}{0.4,0.4,0.4}
+
 \lstset{
     autogobble=true,
     basicstyle=\ttfamily,
     breaklines=true,
-    frame=single,
+    frame=shadowbox,
+    backgroundcolor=\color{lightgray},
     showstringspaces=false,
     numbers=left,
     tabsize=8,
+    keywordstyle=\color{blue},
+    commentstyle=\color{darkgray},
+    stringstyle=\color{darkgreen},
 }
 
 \title{Week 4: Caduceus}

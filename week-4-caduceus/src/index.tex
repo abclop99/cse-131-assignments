@@ -24,7 +24,7 @@
 
 	\begin{enumerate}
 		\item This is the code for compiling a loop.
-			\begin{lstlisting}
+			\begin{lstlisting}[language=Rust]
 				Expr::Loop(e1) => {
 				    let labelstart = gen_label(ls);
 				    let labelbreak = gen_label(ls);
@@ -39,7 +39,7 @@
 				\item Labels don't have useful names, which makes the generated Assembly code a hard to follow.
 			\end{itemize}
 		\item The code for compiling \verb|Expr| into an string of Assembly instructions.
-			\begin{lstlisting}
+			\begin{lstlisting}[language=Rust]
 				fn compile(e: &Expr) -> String {
 				    let mut instrs = Vec::new();
 				    let mut ls = 0;
@@ -55,7 +55,7 @@
 			\end{itemize}
 
 		\item A snippet of the part of \verb|parse_expr| that handles parsing to \verb|BinOp|.
-			\begin{lstlisting}
+			\begin{lstlisting}[language=Rust]
 				[Sexp::Atom(S(op)), e1, e2] if op == "+" =>
 				    Expr::BinOp(Op2::Plus, Box::new(parse_expr(e1)), Box::new(parse_expr(e2))),
 				[Sexp::Atom(S(op)), e1, e2] if op == "-" =>
@@ -67,7 +67,7 @@
 			\begin{itemize}
 				\item A lot of repetition in the code. You can match on the pattern \verb|[Sexp::Atom(S(op)), e1, e2]| once and then match on the operator. Just make sure you match any other expressions that could have the same format first:
 
-					\begin{lstlisting}
+				\begin{lstlisting}[language=Rust]
 						[Sexp::Atom(S(op)), e1, e2] => {
 						    let op = match op.as_str() {
 						        "+" => Op2::Plus,
@@ -103,7 +103,7 @@
 				\item Run \verb|cargo clippy --all| and fix the problems
 				\item Run \verb|cargo fmt| to format the code.
 				\item Implement \verb|Display| for \verb|Instr|, \verb|Val|, etc. to get the \verb|ToString| trait so you can do
-					\begin{lstlisting}[language=Rust, numbers=none, frame=none]
+					\begin{lstlisting}[language=Rust, numbers=none]
         					Instr::IMov(dst, src) => format!("mov {}, {}", dst, src),
 					\end{lstlisting}
 					to get the string representation of something.
@@ -120,6 +120,22 @@
 	\subsection{Program 2}
 
 	\section{Bugs, Missing Features, and Design Decisions}
+
+	Missing feature: checking \verb|input| for overflow and nice error messages for other invalid inputs.
+
+	\begin{lstlisting}[language=bash, numbers=none]
+		$ cat tests/input.snek
+		input
+		$ make tests/input.run && tests/input.run 4611686018427387904
+		make: 'tests/input.run' is up to date.
+		-4611686018427387904
+	\end{lstlisting}
+
+	\begin{itemize}
+		\item For checking overflow, you can shift the number left by 1 bit and then shift it back right by 1 bit. If the number is the same, then it didn't overflow. If it's different, then it overflowed.
+
+		\item For the error messages, you can use \verb|unwrap_or_else| to panic with a custom error message if the \verb|Option| is \verb|None|.
+	\end{itemize}
 
 	\section{Lessons and Advice}
 
