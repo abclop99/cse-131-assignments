@@ -131,6 +131,18 @@
 		-4611686018427387904
 	\end{lstlisting}
 
+	Relevant snippet of code:
+
+	\begin{lstlisting}[language=Rust, title=\texttt{runtime/start.rs}]
+		fn parse_input(input: &str) -> u64 {
+		    match input {
+			"true" => 3,
+			"false" => 1,
+			_ => (input.parse::<i64>().unwrap() as u64) << 1, // TODO: check for overflow
+		    }
+		}
+	\end{lstlisting}
+
 	\begin{itemize}
 		\item For checking overflow, you can shift the number left by 1 bit and then shift it back right by 1 bit. If the number is the same, then it didn't overflow. If it's different, then it overflowed.
 
