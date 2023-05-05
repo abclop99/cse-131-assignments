@@ -22,38 +22,7 @@
 
 	\subsubsection{Relevant snippets}
 
-	\begin{enumerate}
-		\item This is the code for compiling a loop.
-			\begin{lstlisting}[language=Rust]
-				Expr::Loop(e1) => {
-				    let labelstart = gen_label(ls);
-				    let labelbreak = gen_label(ls);
-				    instrs.push(Instr::ILabel(labelstart));
-				    h_compile_with(e1, instrs, si, env, ls, Some(labelbreak));
-				    instrs.push(Instr::IJmp(labelstart));
-				    instrs.push(Instr::ILabel(labelbreak));
-				},
-			\end{lstlisting}
-
-			\begin{itemize}
-				\item Labels don't have useful names, which makes the generated Assembly code a hard to follow.
-			\end{itemize}
-		\item The code for compiling \verb|Expr| into an string of Assembly instructions.
-			\begin{lstlisting}[language=Rust]
-				fn compile(e: &Expr) -> String {
-				    let mut instrs = Vec::new();
-				    let mut ls = 0;
-				    h_compile_with(e, &mut instrs, 2, &HashMap::new(), &mut ls, None);
-				    instrs.iter().map(|&i| format!("  {}\n", &instr_to_str(i))).fold(String::new(), |acc, s| acc + &s)
-				}
-			\end{lstlisting}
-			\begin{itemize}
-				\item Mutably borrowing a vector of instructions and adding to it is an interesting decision.
-				\item Using explicitly called functions to convert Assembly components to strings is a little clumsy when the \verb|Display| exists.
-				\item Every line of Assembly is indented by two spaces, including labels. This makes the generated Assembly code a little difficult to read.
-				\item What does \verb|h_compile_with| stand for?
-			\end{itemize}
-
+	\begin{enumerate}[\textrm{Snippet} 1:]
 		\item A snippet of the part of \verb|parse_expr| that handles parsing to \verb|BinOp|.
 			\begin{lstlisting}[language=Rust]
 				[Sexp::Atom(S(op)), e1, e2] if op == "+" =>
@@ -80,24 +49,155 @@
 						}
 					\end{lstlisting}
 			\end{itemize}
+
+		\pagebreak
+		\item This snippet is from the \verb|instr_to_string| function.
+			\begin{lstlisting}[language=Rust]
+				enum Instr {
+				    \ldots
+				    IJmp(i32),
+				    IJe(i32),
+				    IJne(i32),
+				    IJo(i32), // it's jover
+				    ILabel(i32),
+				}
+				. . . ( other code )
+				let label_name = |l: i32| {
+				    let label_name = |l: i32| {
+				        if l < 0 {
+				            format!(".E{}", -l)
+				        } else {
+				            format!(".L{}", l)
+				        }
+				    };
+				    . . .
+				};
+			\end{lstlisting}
+
+			This snippet handles converting labels to strings for the \verb|IJmp|, \verb|IJe|, \verb|IJne|, \verb|IJo|, and \verb|ILabel| instructions.
+
+			\begin{enumerate}
+				\item The instructions should not all begin with the same prefix for no reason because it is useless to do so. \verb|cargo clippy| warns about this:
+					\begin{lstlisting}[numbers=none, language=bash, basicstyle=\ttfamily\small, title=\texttt{cargo clippy} output]
+						warning: all variants have the same prefix: `I`
+						  --> src/main.rs:26:1
+						   |
+						26 | / enum Instr {
+						27 | |     IMov(Val, Val),
+						28 | |     IAdd(Val, Val),
+						29 | |     ISub(Val, Val),
+						...  |
+						46 | |     ILabel(i32),
+						47 | | }
+						   | |_^
+						   |
+						   = help: remove the prefixes and use full paths to the variants instead of glob imports
+						   = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#enum_variant_names
+						   = note: `#[warn(clippy::enum_variant_names)]` on by default
+					\end{lstlisting}
+				\item Labels do not have names that are useful for debugging. They are just \verb|.L<number>| or \verb|.E<number>|. It would be better to have the labels be named after the purpose. 
+					For example, if the label is for the start of a loop, it could be named \verb|loop_start<number>| or something similar.
+					Labels for error handling should also be named appropriately and stored in a human-readable way instead of just a negative number.
+			\end{enumerate}
+
+		\item This snippet handles variable identifiers, including the special \verb|input| identifier.
+			\begin{lstlisting}[language=Rust]
+				Expr::Id(id) => {
+				    if id == "input" {
+					instrs.push(Instr::IMov(rax, rdi));
+				    } else {
+					let id_si = *env.get(id).expect(&format!("Unbound variable identifier {}", id));
+					instrs.push(Instr::IMov(rax, stack_slot(id_si)));
+				    }
+				},
+			\end{lstlisting}
 	\end{enumerate}
 
+	\pagebreak
 	\subsection{Program 2}
+	\begin{lstlisting}[language=lisp, title=\texttt{example2.snek}]
+		(let ((a 2) (b 3) (c 0) (i 0) (j 0))
+		  (loop
+		    (if (< i a)
+		      (block
+			(set! j 0)
+			(loop
+			  (if (< j b)
+			    (block (set! c (sub1 c)) (set! j (add1 j)))
+			    (break c)
+			  )
+			)
+			(set! i (add1 i))
+		      )
+		      (break c)
+		    )
+		  )
+		)
+	\end{lstlisting}
+
+	\subsubsection{Relevant snippet 1}
+
+	\begin{lstlisting}[language=Rust]
+		Expr::Set(id, e1) => {
+		    let id_si = *env.get(id).expect(&format!("Unbound variable identifier {}", id));
+		    h_compile_with(e1, instrs, si, env, ls, brkl);
+		    instrs.push(Instr::IMov(stack_slot(id_si), rax));
+		},
+	\end{lstlisting}
+
+	This snippet handles setting a variable to a value. It is called when the \verb|set!| keyword is used.
+
+	\subsubsection{Relevant snippet 2}
+
+	This is the code for compiling a loop.
+	\begin{lstlisting}[language=Rust]
+		Expr::Loop(e1) => {
+		    let labelstart = gen_label(ls);
+		    let labelbreak = gen_label(ls);
+		    instrs.push(Instr::ILabel(labelstart));
+		    h_compile_with(e1, instrs, si, env, ls, Some(labelbreak));
+		    instrs.push(Instr::IJmp(labelstart));
+		    instrs.push(Instr::ILabel(labelbreak));
+		},
+	\end{lstlisting}
+
+	\begin{itemize}
+		\item Labels don't have useful names, which makes the generated Assembly code a hard to follow.
+		\item In the usage of \verb|h_compile_with|, it isn't immediately clear that \verb|instrs| is being added to. 
+			Something like \verb|instrs.extend(h_compile_with(e1, si, env, ls, Some(labelbreak)))| would be more explicit and more funcional.
+	\end{itemize}
+
+	\subsubsection{Relevant snippet 3}
+	
+	\begin{lstlisting}[language=Rust, title=Code for compiling \texttt{Expr} into an string of Assembly instructions]
+		fn compile(e: &Expr) -> String {
+		    let mut instrs = Vec::new();
+		    let mut ls = 0;
+		    h_compile_with(e, &mut instrs, 2, &HashMap::new(), &mut ls, None);
+		    instrs.iter().map(|&i| format!("  {}\n", &instr_to_str(i))).fold(String::new(), |acc, s| acc + &s)
+		}
+	\end{lstlisting}
+	\begin{itemize}
+		\item Mutably borrowing a vector of instructions and adding to it is an interesting decision.
+		\item Using explicitly called functions to convert Assembly components to strings is a little clumsy when the \verb|Display| exists.
+		\item Every line of Assembly is indented by two spaces, including labels. This makes the generated Assembly code a little difficult to read.
+		\item What does \verb|h_compile_with| stand for?
+	\end{itemize}
 
 	\section{Bugs, Missing Features, and Design Decisions}
 
-	All of my tests passed on this compiler except for a few that checked the error message for when the input is invalid (undefined for Cobra?). 
+	All of my tests passed on this compiler except for a few that checked the error message for when the input is invalid (undefined for Cobra?), and I tried some more tests, but they seem to work.
 
 	\section{Lessons and Advice}
 
 	\begin{enumerate}
-		\item Defining common snippets of Assembly as vectors and adding them to the vector of instructions is a good idea.
+		\item Defining common snippets of Assembly as variables and adding them to the vector of instructions is a good idea.
 		\item the function \verb|h_compile_with| takes a \verb|&mut Vec<Instr>|.
 
 			Labels don't have useful names
 
 			%Why is \verb|gen_label| a closure?
-		\item
+		\item I will consider using more digits in the numbers for the labels in case there are enough labels that it might make a difference, and separate the digits from the string part to make it clearer.
 		\item 
 			\begin{itemize}
 				\item Run \verb|cargo clippy --all| and fix the problems
@@ -107,17 +207,198 @@
         					Instr::IMov(dst, src) => format!("mov {}, {}", dst, src),
 					\end{lstlisting}
 					to get the string representation of something.
+				\item Use different error messages for different errors.
 			\end{itemize}
 
 	\end{enumerate}
 
+	%--------------------------------------------------------------------------------------
+	
 	\chapter*{Compiler 36}
 
 	\section{Tracing the compiler}
 
 	\subsection{Program 1}
 
+	\begin{lstlisting}[language=lisp, title=Factorial]
+		(let
+			((i 1) (acc 1))
+			(loop
+				(if (> i input)
+					(break acc)
+					(block
+						(set! acc (* acc i))
+						(set! i (+ i 1))
+					)
+				)
+			)
+		)
+	\end{lstlisting}
+
+	\pagebreak
+	\subsubsection{Relevant Snippet 1}
+
+	\begin{lstlisting}[language=Rust, title=from \texttt{src/main.rs}]
+		If(cnd, thn, els) => {
+		    let else_lbl = make_label("else", &mut mst.label_index);
+		    let end_lbl = make_label("endif", &mut mst.label_index);
+
+		    compile_to_instrs(cnd, imst.clone(), mst);
+		    mst.instrs.push(ICmp(Reg(RAX), Imm(1))); // only check for false
+		    mst.instrs.push(IJmp(Cond::Equal, else_lbl.clone()));
+		    compile_to_instrs(thn, imst.clone(), mst);
+		    mst.instrs.push(IJmp(Cond::Unconditional, end_lbl.clone())); // jump to end after then
+		    mst.instrs.push(ILbl(else_lbl));
+		    compile_to_instrs(els, imst, mst);
+		    mst.instrs.push(ILbl(end_lbl));
+		}
+	\end{lstlisting}
+
+	This is the snippet of code that handles \verb|if| expressions. It is difficult to tell what the call to \verb|compile_to_instrs| does at a glance. It looks like it is not doing anything to \verb|instrs|, but it is hidden in \verb|mst|.
+
+	The frequent use of very abbreviated variable names makes it difficult to understand what is going on.
+
+	\pagebreak
+	\subsubsection{Relevant Snippet 2}
+
+	\begin{lstlisting}[language=Rust, title=from \texttt{src/main.rs}]
+		match op {
+		    Plus => {
+		        type_check(Type::Number, Reg(RAX), mst);
+		        type_check(Type::Number, RegOffset(RSP, imst.stack_index + 1), mst);
+		        mst.instrs
+			.push(IAdd(Reg(RAX), RegOffset(RSP, imst.stack_index + 1)));
+		        overflow_check(mst);
+		    }
+		    Minus => {
+		        type_check(Type::Number, Reg(RAX), mst);
+		        type_check(Type::Number, RegOffset(RSP, imst.stack_index + 1), mst);
+		        mst.instrs
+		            .push(ISub(Reg(RAX), RegOffset(RSP, imst.stack_index + 1)));
+		        overflow_check(mst);
+		    }
+		    Times => {
+		        type_check(Type::Number, Reg(RAX), mst);
+		        type_check(Type::Number, RegOffset(RSP, imst.stack_index + 1), mst);
+		        mst.instrs.extend([
+		            ISar(Reg(RAX), Imm(1)), // right shift once before multiplying
+		            IMul(Reg(RAX), RegOffset(RSP, imst.stack_index + 1)),
+		        ]);
+		        overflow_check(mst);
+		    }
+		    . . .
+	\end{lstlisting}
+
+	This snippet of code handles converting the \verb|+|, \verb|-|, and \verb|*| operators from the AST to the corresponding assembly instructions. There is a lot of code reuse in this and the other \verb|BinOp| operators that can be eliminated by moving some of the code to outside the match statement.
+
+	\subsubsection{Relevant Snippet 3}
+
+	\begin{lstlisting}[language=Rust, title=Relevant snippet 3: from \texttt{src/main.rs}, float, floatplacement=H]
+        Id(x) if x == "input" => mst.instrs.push(IMov(Reg(RAX), Reg(RDI))),
+        Id(x) => match imst.env.get(x) {
+            Some(i) => {
+                mst.instrs.push(IMov(Reg(RAX), RegOffset(RSP, *i)));
+            }
+            None => panic!("Unbound variable identifier {x}"),
+        },
+	\end{lstlisting}
+
+	This snippet of code handles the \verb|input| and variable identifier cases. The \verb|input| case is a special case that is handled separately from the other identifiers. The other identifiers are looked up in the environment and the corresponding value is moved into \verb|RAX|.
+
+	\pagebreak
 	\subsection{Program 2}
+	\begin{lstlisting}[language=lisp, title=\texttt{example2.snek}]
+		(let ((a 2) (b 3) (c 0) (i 0) (j 0))
+		  (loop
+		    (if (< i a)
+		      (block
+			(set! j 0)
+			(loop
+			  (if (< j b)
+			    (block (set! c (sub1 c)) (set! j (add1 j)))
+			    (break c)
+			  )
+			)
+			(set! i (add1 i))
+		      )
+		      (break c)
+		    )
+		  )
+		)
+	\end{lstlisting}
+
+	\subsubsection{Relevant Snippet 1}
+
+	\begin{lstlisting}[language=Rust, title=from \texttt{src/main.rs}]
+		Set(x, e) => match &imst.env.get(x) {
+		    Some(&i) => {
+			compile_to_instrs(e, imst, mst);
+			mst.instrs.push(IMov(RegOffset(RSP, i), Reg(RAX)));
+		    }
+		    None => panic!("Unbound variable identifier {x}"),
+		},
+	\end{lstlisting}
+
+	\subsubsection{Relevant Snippet 2}
+
+	\begin{lstlisting}[language=Rust]
+        Let(binds, e) => {
+            if binds
+                .iter()
+                .map(|(s, _)| s.clone())
+                .collect::<im::HashSet<String>>()
+                .len()
+                != binds.len()
+            {
+                panic!("Duplicate binding")
+            }
+	    . . .
+	\end{lstlisting}
+
+	This snippet is where the \verb|let| bindings are checked for duplicates. Using a HashSet is clever, and better than what I did.
+
+	\subsubsection{Relevant Snippet 3}
+
+	\begin{lstlisting}[language=Rust]
+macro_rules! gen_asm {
+    ($ops:ident, $x:ident, $y:ident, $instr:ident) => {
+        match ($x, $y) {
+            (Val::Reg(r), Val::Imm(i)) => {
+                dynasm!($ops ; .arch x64 ; $instr Rq(reg_to_idx(r)), *i as _);
+            }
+            (Val::Reg(r0), Val::Reg(r1)) => {
+                dynasm!($ops ; .arch x64 ; $instr Rq(reg_to_idx(r0)), Rq(reg_to_idx(r1)));
+            }
+            (Val::Reg(r0), Val::RegOffset(r1, i)) => {
+                dynasm!($ops ; .arch x64 ; $instr Rq(reg_to_idx(r0)), [Rq(reg_to_idx(r1)) - (*i as i32) * 8]);
+            }
+            (Val::RegOffset(r0, i), Val::Reg(r1)) => {
+                dynasm!($ops ; .arch x64 ; $instr [Rq(reg_to_idx(r0)) - (*i as i32) * 8], Rq(reg_to_idx(r1)));
+            }
+            _ => panic!("cannot match with generated asm")
+        }
+    };
+}
+
+pub fn instr_to_asm(
+    i: &Instr,
+    lbls: &im::HashMap<&String, DynamicLabel>,
+    ops: &mut dynasmrt::x64::Assembler,
+) {
+    match i {
+        Instr::IMov(Val::Reg(r), Val::Imm(i)) => {
+            dynasm!(ops ; .arch x64 ; mov Rq(reg_to_idx(r)), QWORD *i);
+        }
+        Instr::IMov(x, y) => gen_asm!(ops, x, y, mov),
+        Instr::IAdd(x, y) => gen_asm!(ops, x, y, add),
+        Instr::ISub(x, y) => gen_asm!(ops, x, y, sub),
+        Instr::ICmp(x, y) => gen_asm!(ops, x, y, cmp),
+        Instr::ITest(x, y) => gen_asm!(ops, x, y, test),
+        Instr::IMul(Val::Reg(r), Val::Imm(i)) => {
+	. . .
+	\end{lstlisting}
+
+	This snippet is where the \verb|Instr| enums are converted to assembly. A macro is used to generate the assembly for each instruction. I don't understand this, but I will look into it.
 
 	\section{Bugs, Missing Features, and Design Decisions}
 
@@ -146,9 +427,32 @@
 	\begin{itemize}
 		\item For checking overflow, you can shift the number left by 1 bit and then shift it back right by 1 bit. If the number is the same, then it didn't overflow. If it's different, then it overflowed.
 
+			Or you can extract the two most significant bits and check if they are the same. If they are, then it didn't overflow. If they are different, then it overflowed.
+
 		\item For the error messages, you can use \verb|unwrap_or_else| to panic with a custom error message if the \verb|Option| is \verb|None|.
 	\end{itemize}
 
 	\section{Lessons and Advice}
+
+	\begin{enumerate}
+		\item The mutable and immutable states are stored in structs that are passed to the \verb|compile_to_instrs| function. This should mean the function signature and every call to the function does not have to change if a new field is added to the structs.
+		\item Hiding \verb|instrs| in the \verb|MutState| struct
+		\item Improvements to mine
+			\begin{itemize}
+				\item Look into \verb|unwrap_or|?
+				\item \verb|dynasm| stuff
+				\item Look into macros
+			\end{itemize}
+		\item Improvements to author of compiler
+			\begin{itemize}
+				\item Run \verb|cargo clippy --all| and fix the problems
+				\item Use more explicit and descriptive names for variables, enum variants, etc. Don't make people decipher what \verb|mst| or \verb|Ilbl| means.
+					\begin{itemize}
+						\item \verb|type_check| vs \verb|type_test|?
+					\end{itemize}
+				\item No \verb|I| prefix in \verb|Instr| enum variants
+				\item Organize files better. Keep things that do one thing in one file, instead of putting enums in \verb|lib.rs| and using them in \verb|main.rs|, and maybe more files?
+			\end{itemize}
+	\end{enumerate}
 
 \end{document}
