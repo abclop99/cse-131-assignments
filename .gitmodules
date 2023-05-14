@@ -10,3 +10,6 @@
 [submodule "diamondback-abclop99"]
 	path = diamondback-abclop99
 	url = git@github.com:ucsd-compilers-s23/diamondback-abclop99.git
+[submodule "egg-eater"]
+	path = egg-eater
+	url = git@github.com:ucsd-compilers-s23/diamondback-abclop99.git
