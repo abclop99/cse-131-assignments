@@ -13,3 +13,6 @@
 [submodule "egg-eater"]
 	path = egg-eater
 	url = git@github.com:ucsd-compilers-s23/diamondback-abclop99.git
+[submodule "forest-flame"]
+	path = forest-flame
+	url = git@github.com:abclop99/cse-131-forest-flame.git
